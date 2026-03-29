@@ -26,12 +26,13 @@ class LocalDatasource {
     required String model,
     String? systemPrompt,
   }) async {
+    final now = DateTime.now();
     final entry = ChatSessionsCompanion.insert(
       title: 'New conversation',
       model: model,
       systemPrompt: systemPrompt ?? '',
-      createdAt: DateTime.now(),
-      lastUpdatedAt: DateTime.now(),
+      createdAt: now,
+      lastUpdatedAt: now,
     );
     final id = await _database.chatSessionDao.createSession(entry);
     return ChatSession(
@@ -39,10 +40,41 @@ class LocalDatasource {
       title: 'New conversation',
       model: model,
       systemPrompt: systemPrompt ?? '',
-      createdAt: DateTime.now(),
-      lastUpdatedAt: DateTime.now(),
+      createdAt: now,
+      lastUpdatedAt: now,
       pinned: false,
       messageCount: 0,
+    );
+  }
+
+  Future<ChatSession?> getSession(int sessionId) async {
+    final row = await _database.chatSessionDao.getById(sessionId);
+    if (row == null) return null;
+    return ChatSession(
+      id: row.id,
+      title: row.title,
+      model: row.model,
+      systemPrompt: row.systemPrompt,
+      createdAt: row.createdAt,
+      lastUpdatedAt: row.lastUpdatedAt,
+      pinned: row.pinned,
+      messageCount: row.messageCount,
+    );
+  }
+
+  Future<void> updateSession({
+    required int sessionId,
+    String? title,
+    DateTime? lastUpdatedAt,
+    int? messageCount,
+    bool? pinned,
+  }) async {
+    await _database.chatSessionDao.updateSessionFields(
+      id: sessionId,
+      title: title != null ? Value(title) : null,
+      lastUpdatedAt: lastUpdatedAt != null ? Value(lastUpdatedAt) : null,
+      messageCount: messageCount != null ? Value(messageCount) : null,
+      pinned: pinned != null ? Value(pinned) : null,
     );
   }
 

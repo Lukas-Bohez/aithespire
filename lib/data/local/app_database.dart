@@ -20,8 +20,13 @@ LazyDatabase _openConnection() {
 
 class Settings extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get themeMode => text().withDefault(Constant('system'))();
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
   RealColumn get fontSize => real().withDefault(const Constant(15.0))();
+  TextColumn get defaultModel => text().withDefault(const Constant(''))();
+  TextColumn get ollamaBaseUrl => text().withDefault(const Constant('http://localhost:11434'))();
+  TextColumn get defaultSystemPrompt => text().withDefault(const Constant('You are a helpful assistant.'))();
+  BoolColumn get streamResponses => boolean().withDefault(const Constant(true))();
+  BoolColumn get saveHistory => boolean().withDefault(const Constant(true))();
 }
 
 @DriftDatabase(
@@ -43,6 +48,23 @@ class ChatSessionDao extends DatabaseAccessor<AppDatabase> with _$ChatSessionDao
   Future<List<ChatSessionModel>> getAllSessions() => select(chatSessions).get();
   Future<ChatSessionModel?> getById(int id) => (select(chatSessions)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   Future<bool> updateSession(ChatSessionsCompanion entry) => update(chatSessions).replace(entry);
+
+  Future<int> updateSessionFields({
+    required int id,
+    Value<String>? title,
+    Value<DateTime>? lastUpdatedAt,
+    Value<int>? messageCount,
+    Value<bool>? pinned,
+  }) {
+    final companion = ChatSessionsCompanion(
+      title: title ?? const Value.absent(),
+      lastUpdatedAt: lastUpdatedAt ?? const Value.absent(),
+      messageCount: messageCount ?? const Value.absent(),
+      pinned: pinned ?? const Value.absent(),
+    );
+    return (update(chatSessions)..where((tbl) => tbl.id.equals(id))).write(companion);
+  }
+
   Future<int> deleteSession(int id) => (delete(chatSessions)..where((tbl) => tbl.id.equals(id))).go();
 }
 

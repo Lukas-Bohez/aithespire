@@ -29,8 +29,30 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<ChatSession?> getSession(int sessionId) async {
+    return localDatasource.getSession(sessionId);
+  }
+
+  @override
   Future<List<ChatMessage>> getMessages(String sessionId) async {
     return localDatasource.getMessages(sessionId);
+  }
+
+  @override
+  Future<void> updateSession({
+    required int sessionId,
+    String? title,
+    DateTime? lastUpdatedAt,
+    int? messageCount,
+    bool? pinned,
+  }) async {
+    await localDatasource.updateSession(
+      sessionId: sessionId,
+      title: title,
+      lastUpdatedAt: lastUpdatedAt,
+      messageCount: messageCount,
+      pinned: pinned,
+    );
   }
 
   @override

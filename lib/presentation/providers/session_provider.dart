@@ -36,7 +36,7 @@ class SessionProvider extends _$SessionProvider {
   }
 
   Future<void> pinSession(int id, bool pinned) async {
-    // TODO: implement pin with persistence
+    await repository.updateSession(sessionId: id, pinned: pinned);
     await reload();
   }
 }

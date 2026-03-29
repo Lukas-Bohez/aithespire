@@ -27,8 +27,18 @@ class App extends ConsumerWidget {
           GoRoute(
             path: '/chat',
             builder: (context, state) {
-              final extraModel = state.extra is String ? state.extra as String : null;
-              return ChatScreen(initialModel: extraModel);
+              int? sessionId;
+              String? initialModel;
+              final extra = state.extra;
+              if (extra is int) {
+                sessionId = extra;
+              } else if (extra is String) {
+                initialModel = extra;
+              } else if (extra is Map<String, dynamic>) {
+                sessionId = extra['sessionId'] as int?;
+                initialModel = extra['model'] as String?;
+              }
+              return ChatScreen(sessionId: sessionId, initialModel: initialModel);
             },
           ),
           GoRoute(path: '/models', builder: (context, state) => const ModelsScreen()),

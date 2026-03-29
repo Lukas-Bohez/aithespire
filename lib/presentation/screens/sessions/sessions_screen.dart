@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/session_provider.dart';
 
 class SessionsScreen extends ConsumerStatefulWidget {
@@ -62,7 +63,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                       child: ListTile(
                         title: Text(session.title),
                         subtitle: Text(
-                          '${session.messageCount} messages • ${session.model}',
+                          '${session.messageCount} messages • ${session.model} • ${_humanizeDateTime(session.lastUpdatedAt)}',
                         ),
                         trailing: IconButton(
                           icon: Icon(
@@ -77,7 +78,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                           },
                         ),
                         onTap: () {
-                          // TODO: navigate to chat details
+                          context.go('/chat', extra: {'sessionId': session.id, 'model': session.model});
                         },
                       ),
                     );
@@ -92,4 +93,11 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
       ),
     );
   }
-}
+  String _humanizeDateTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.month}/${dt.day}/${dt.year}';
+  }}

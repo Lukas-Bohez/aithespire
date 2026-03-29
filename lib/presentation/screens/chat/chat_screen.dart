@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/chat_message.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/models_provider.dart';
 import '../../providers/settings_provider.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/message_bubble.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
+  final int? sessionId;
   final String? initialModel;
 
-  const ChatScreen({super.key, this.initialModel});
+  const ChatScreen({super.key, this.sessionId, this.initialModel});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -24,6 +26,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _activeModel = widget.initialModel ?? '';
+    if (widget.sessionId != null) {
+      Future.microtask(() => ref.read(chatProvider.notifier).loadSession(widget.sessionId!));
+    }
   }
 
   @override
@@ -60,8 +65,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatState = ref.watch(chatProvider);
     final notifier = ref.read(chatProvider.notifier);
     final settings = ref.watch(settingsProvider);
+    final modelsState = ref.watch(modelsProvider);
     final currentModel = _activeModel.isNotEmpty ? _activeModel : settings.defaultModel;
 
+    final sessionId = widget.sessionId?.toString() ?? 'default';
     final messages = chatState.maybeWhen(data: (list) => list, orElse: () => <ChatMessage>[]);
     final isLoading = chatState is AsyncLoading;
 
@@ -69,8 +76,57 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _activeModel = settings.defaultModel;
     }
 
+    final availableModels = modelsState.maybeWhen(data: (models) => models.map((m) => m.name).toList(), orElse: () => <String>[]);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Text('Chat'),
+            const SizedBox(width: 12),
+            if (currentModel.isNotEmpty)
+              PopupMenuButton<String>(
+                tooltip: 'Select model',
+                initialValue: currentModel,
+                onSelected: (model) {
+                  setState(() {
+                    _activeModel = model;
+                  });
+                  ref.read(settingsProvider.notifier).updateDefaultModel(model);
+                },
+                itemBuilder: (context) {
+                  if (availableModels.isEmpty) {
+                    return [
+                      const PopupMenuItem(value: '', child: Text('No models available')),
+                    ];
+                  }
+                  return availableModels
+                      .map(
+                        (name) => PopupMenuItem(
+                          value: name,
+                          child: Text(name),
+                        ),
+                      )
+                      .toList();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(currentModel, style: const TextStyle(fontSize: 14)),
+                      const Icon(Icons.expand_more, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -86,7 +142,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         message: msg,
                         onRetry: msg.isError
                             ? () => notifier.retryMessage(
-                                  sessionId: 'default',
+                                  sessionId: sessionId,
                                   model: currentModel,
                                   retryContent: msg.retryContent ?? '',
                                 )
@@ -103,7 +159,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (text.isEmpty) return;
 
               await notifier.sendMessage(
-                sessionId: 'default',
+                sessionId: sessionId,
                 model: currentModel,
                 messages: [
                   {'role': 'user', 'content': text},
