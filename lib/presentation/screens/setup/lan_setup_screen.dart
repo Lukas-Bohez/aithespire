@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:ai_the_spire/core/utils/lan_scanner.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LanSetupScreen extends StatefulWidget {
+import 'package:ai_the_spire/core/utils/lan_scanner.dart';
+import '../../providers/dio_provider.dart';
+
+class LanSetupScreen extends ConsumerStatefulWidget {
   const LanSetupScreen({super.key});
 
   @override
-  State<LanSetupScreen> createState() => _LanSetupScreenState();
+  ConsumerState<LanSetupScreen> createState() => _LanSetupScreenState();
 }
 
-class _LanSetupScreenState extends State<LanSetupScreen> {
+class _LanSetupScreenState extends ConsumerState<LanSetupScreen> {
   final TextEditingController _controller = TextEditingController();
-  final OllamaLanScanner _scanner = OllamaLanScanner();
+  late final OllamaLanScanner _scanner;
   bool _isScanning = false;
   List<String> _discovered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _scanner = OllamaLanScanner(dio: ref.read(dioProvider));
+  }
+
 
   @override
   void dispose() {

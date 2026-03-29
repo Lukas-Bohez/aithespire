@@ -12,16 +12,9 @@ class OllamaConnectionService {
   final Future<String?> Function() getSavedOllamaUrl;
 
   OllamaConnectionService({
-    Dio? dio,
+    required Dio dio,
     required this.getSavedOllamaUrl,
-  }) : _dio = dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: AppConstants.ollamaDefaultUrl.replaceAll(RegExp(r'/+$'), ''),
-              connectTimeout: AppConstants.connectTimeout,
-              receiveTimeout: AppConstants.receiveTimeout,
-            ),
-          );
+  }) : _dio = dio;
 
   Future<bool> _pingOllama(String url) async {
     final normalizedUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;

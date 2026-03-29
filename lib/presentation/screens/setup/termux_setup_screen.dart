@@ -1,16 +1,18 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class TermuxSetupScreen extends StatefulWidget {
+import '../../providers/dio_provider.dart';
+
+class TermuxSetupScreen extends ConsumerStatefulWidget {
   const TermuxSetupScreen({super.key});
 
   @override
-  State<TermuxSetupScreen> createState() => _TermuxSetupScreenState();
+  ConsumerState<TermuxSetupScreen> createState() => _TermuxSetupScreenState();
 }
 
-class _TermuxSetupScreenState extends State<TermuxSetupScreen> {
+class _TermuxSetupScreenState extends ConsumerState<TermuxSetupScreen> {
   int _currentStep = 0;
   bool _isChecking = false;
 
@@ -31,14 +33,7 @@ class _TermuxSetupScreenState extends State<TermuxSetupScreen> {
     });
 
     try {
-      final dio = Dio(
-        BaseOptions(
-          baseUrl: 'http://localhost:11434',
-          connectTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 5),
-        ),
-      );
-
+      final dio = ref.read(dioProvider);
       final response = await dio.get('/api/version');
       if (!mounted) return;
       if (response.statusCode == 200) {

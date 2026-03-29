@@ -5,7 +5,7 @@ import '../constants/app_constants.dart';
 class OllamaLanScanner {
   final Dio _dio;
 
-  OllamaLanScanner([Dio? dio]) : _dio = dio ?? Dio();
+  OllamaLanScanner({required Dio dio}) : _dio = dio;
 
   Future<List<String>> scanLocalNetwork() async {
     final results = <String>[];

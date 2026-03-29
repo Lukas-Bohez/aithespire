@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/constants/app_constants.dart';
 
@@ -25,6 +26,7 @@ class OllamaRemoteDatasource {
   }
 
   Future<List<Map<String, dynamic>>> fetchModels() async {
+    debugPrint('Fetching models from: ${_dio.options.baseUrl}${AppConstants.ollamaApiTagsPath}');
     final response = await _dio.get(AppConstants.ollamaApiTagsPath);
     if (response.statusCode == 200 && response.data is List) {
       return List<Map<String, dynamic>>.from(response.data);

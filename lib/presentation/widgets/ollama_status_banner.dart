@@ -32,17 +32,27 @@ class _OllamaStatusBannerState extends ConsumerState<OllamaStatusBanner> {
     super.dispose();
   }
 
+  bool _wasConnected = false;
+
   void _startPolling() {
     _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      final online = await _datasource.checkVersion();
-      if (online && mounted) {
+      final isNowConnected = await _datasource.checkVersion();
+
+      if (isNowConnected && !_wasConnected && mounted) {
         setState(() {
           _visible = false;
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Ollama connected')),
+          const SnackBar(
+            content: Text('✅ Ollama connected'),
+            duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
+
+      _wasConnected = isNowConnected;
     });
   }
 
@@ -60,10 +70,18 @@ class _OllamaStatusBannerState extends ConsumerState<OllamaStatusBanner> {
         setState(() {
           _visible = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Ollama connected')),
-        );
+        if (!_wasConnected) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Ollama connected'),
+              duration: Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
+
+      _wasConnected = success;
     }
   }
 
