@@ -23,29 +23,41 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
   String _pullInfo = '';
   CancelToken? _cancelToken;
 
-  final _suggestedModels = [
-    {'name': 'tinyllama', 'size': '637 MB'},
-    {'name': 'llama3.2:1b', 'size': '1.3 GB'},
-    {'name': 'llama3.2:3b', 'size': '2.0 GB'},
-    {'name': 'llama3.2:8b', 'size': '4.7 GB'},
-    {'name': 'llama3:latest', 'size': '4.7 GB'},
-    {'name': 'phi3:mini', 'size': '2.3 GB'},
-    {'name': 'phi3.5', 'size': '2.2 GB'},
-    {'name': 'phi4', 'size': '9.1 GB'},
-    {'name': 'gemma2:2b', 'size': '1.6 GB'},
-    {'name': 'gemma2:9b', 'size': '5.4 GB'},
-    {'name': 'gemma3:1b', 'size': '815 MB'},
-    {'name': 'gemma3:4b', 'size': '2.5 GB'},
-    {'name': 'mistral', 'size': '4.1 GB'},
-    {'name': 'mistral-nemo', 'size': '7.1 GB'},
-    {'name': 'qwen2.5:0.5b', 'size': '397 MB'},
-    {'name': 'qwen2.5:1.5b', 'size': '986 MB'},
-    {'name': 'qwen2.5:3b', 'size': '1.9 GB'},
-    {'name': 'qwen2.5:7b', 'size': '4.7 GB'},
-    {'name': 'deepseek-r1:1.5b', 'size': '1.1 GB'},
-    {'name': 'deepseek-r1:7b', 'size': '4.7 GB'},
-    {'name': 'nomic-embed-text', 'size': '274 MB'},
-  ];
+  final Map<String, List<Map<String, String>>> _suggestedModelsByCategory = {
+    'POPULAR': [
+      {'name': 'llama3.2:1b', 'size': '1.3 GB'},
+      {'name': 'llama3.2:3b', 'size': '2.0 GB'},
+      {'name': 'llama3:latest', 'size': '4.7 GB'},
+      {'name': 'llama3.1:8b', 'size': '4.7 GB'},
+      {'name': 'phi4', 'size': '9.1 GB'},
+      {'name': 'phi3:mini', 'size': '2.3 GB'},
+      {'name': 'gemma3:1b', 'size': '815 MB'},
+      {'name': 'gemma3:4b', 'size': '2.5 GB'},
+      {'name': 'mistral', 'size': '4.1 GB'},
+      {'name': 'qwen2.5:7b', 'size': '4.7 GB'},
+      {'name': 'deepseek-r1:7b', 'size': '4.7 GB'},
+      {'name': 'tinyllama', 'size': '637 MB'},
+    ],
+    'UNCENSORED': [
+      {'name': 'llama2-uncensored', 'size': '3.8 GB'},
+      {'name': 'mistral-openorca', 'size': '4.1 GB'},
+      {'name': 'dolphin-mixtral', 'size': '26 GB'},
+      {'name': 'dolphin-llama3:8b', 'size': '4.7 GB'},
+      {'name': 'dolphin-phi', 'size': '1.6 GB'},
+      {'name': 'wizard-vicuna-uncensored', 'size': '3.8 GB'},
+      {'name': 'wizardlm-uncensored', 'size': '3.8 GB'},
+      {'name': 'nous-hermes2', 'size': '4.1 GB'},
+      {'name': 'openhermes', 'size': '4.1 GB'},
+      {'name': 'neural-chat', 'size': '4.1 GB'},
+    ],
+    'CODING': [
+      {'name': 'qwen2.5-coder:1.5b', 'size': '986 MB'},
+      {'name': 'qwen2.5-coder:7b', 'size': '4.7 GB'},
+      {'name': 'deepseek-coder-v2', 'size': '8.9 GB'},
+      {'name': 'codellama:7b', 'size': '3.8 GB'},
+      {'name': 'starcoder2:3b', 'size': '1.7 GB'},
+    ],
+  };
 
   @override
   void dispose() {
@@ -258,29 +270,42 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _suggestedModels.map((model) {
-                            final name = model['name'] as String;
-                            final size = model['size'] as String;
-                            return FilterChip(
-                              label: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                  Text(size, style: Theme.of(context).textTheme.bodySmall),
-                                ],
-                              ),
-                              selected: _selectedModelName == name,
-                              onSelected: (_) {
-                                setState(() {
-                                  _pullController.text = name;
-                                });
-                              },
-                            );
-                          }).toList(),
+                        SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: _suggestedModelsByCategory.entries.expand((entry) {
+                              final category = entry.key;
+                              final categoryModels = entry.value;
+                              return [
+                                Text(category, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: categoryModels.map((model) {
+                                    final name = model['name']!;
+                                    final size = model['size']!;
+                                    return ActionChip(
+                                      label: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                          Text(size, style: Theme.of(context).textTheme.bodySmall),
+                                        ],
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _pullController.text = name;
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 16),
+                              ];
+                            }).toList(),
+                          ),
                         ),
                       ]
                     ],

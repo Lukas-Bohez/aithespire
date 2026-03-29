@@ -66,17 +66,48 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                         subtitle: Text(
                           '${session.messageCount} messages • ${session.model} • ${_humanizeDateTime(session.lastUpdatedAt)}',
                         ),
-                        trailing: IconButton(
-                          icon: Icon(
-                            session.pinned
-                                ? Icons.push_pin
-                                : Icons.push_pin_outlined,
-                          ),
-                          onPressed: () {
-                            ref
-                                .read(sessionProvider.notifier)
-                                .pinSession(session.id, !session.pinned);
-                          },
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                session.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                              ),
+                              onPressed: () {
+                                ref.read(sessionProvider.notifier).pinSession(session.id, !session.pinned);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              color: Colors.redAccent,
+                              onPressed: () async {
+                                final shouldDelete = await showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Delete session?'),
+                                    content: const Text('This will permanently delete this conversation.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      FilledButton(
+                                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                        onPressed: () {
+                                          ref.read(sessionProvider.notifier).deleteSession(session.id);
+                                          Navigator.pop(context, true);
+                                        },
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (shouldDelete == true) {
+                                  // The session is already deleted in dialog action.
+                                }
+                              },
+                            ),
+                          ],
                         ),
                         onTap: () async {
                           await ref.read(chatProvider.notifier).loadSession(session.id);
