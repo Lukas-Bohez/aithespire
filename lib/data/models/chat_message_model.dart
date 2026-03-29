@@ -1,41 +1,16 @@
-import 'package:isar/isar.dart';
+import 'package:drift/drift.dart';
 
-import '../../domain/entities/chat_message.dart';
+@DataClassName('ChatMessageModel')
+class ChatMessages extends Table {
+  IntColumn get id => integer().autoIncrement()();
 
-part 'chat_message_model.g.dart';
+  TextColumn get sessionId => text().withLength(min: 1, max: 255)();
 
-@collection
-class ChatMessageModel {
-  Id id = Isar.autoIncrement;
+  TextColumn get role => text().withLength(min: 1, max: 50)();
 
-  late String sessionId;
+  TextColumn get content => text()();
 
-  late String role;
+  DateTimeColumn get createdAt => dateTime()();
 
-  late String content;
-
-  late DateTime createdAt;
-
-  bool isStreaming = false;
-
-  ChatMessage toEntity() {
-    return ChatMessage(
-      id: id,
-      sessionId: sessionId,
-      role: role,
-      content: content,
-      createdAt: createdAt,
-      isStreaming: isStreaming,
-    );
-  }
-
-  static ChatMessageModel fromEntity(ChatMessage entity) {
-    return ChatMessageModel()
-      ..id = entity.id
-      ..sessionId = entity.sessionId
-      ..role = entity.role
-      ..content = entity.content
-      ..createdAt = entity.createdAt
-      ..isStreaming = entity.isStreaming;
-  }
+  BoolColumn get isStreaming => boolean().withDefault(const Constant(false))();
 }

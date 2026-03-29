@@ -36,7 +36,7 @@ class OllamaConnectionService {
   }
 
   Future<AndroidOllamaMode> detectAndroidMode() async {
-    if (await _pingOllama(AppConstants.defaultOllamaUrl)) {
+    if (await _pingOllama(AppConstants.ollamaDefaultUrl)) {
       return AndroidOllamaMode.termux;
     }
 
@@ -44,7 +44,7 @@ class OllamaConnectionService {
 
     if (savedUrl != null &&
         savedUrl.isNotEmpty &&
-        savedUrl != AppConstants.defaultOllamaUrl &&
+        savedUrl != AppConstants.ollamaDefaultUrl &&
         await _pingOllama(savedUrl)) {
       return AndroidOllamaMode.lan;
     }

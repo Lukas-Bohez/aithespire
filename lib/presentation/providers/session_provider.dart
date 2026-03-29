@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/repositories/chat_repository_impl.dart';
+import '../../data/datasources/local_datasource.dart';
 import '../../data/datasources/ollama_remote_datasource.dart';
 import '../../domain/entities/chat_session.dart';
 
@@ -12,7 +13,10 @@ class SessionProvider extends _$SessionProvider {
 
   @override
   Future<List<ChatSession>> build() async {
-    repository = ChatRepositoryImpl(OllamaRemoteDatasource());
+    repository = ChatRepositoryImpl(
+      localDatasource: ref.read(localDatasourceProvider),
+      remoteDatasource: OllamaRemoteDatasource(),
+    );
     return await repository.getSessions();
   }
 

@@ -1,49 +1,20 @@
-import 'package:isar/isar.dart';
+import 'package:drift/drift.dart';
 
-import '../../domain/entities/chat_session.dart';
+@DataClassName('ChatSessionModel')
+class ChatSessions extends Table {
+  IntColumn get id => integer().autoIncrement()();
 
-part 'chat_session_model.g.dart';
+  TextColumn get title => text().withLength(min: 1, max: 255)();
 
-@collection
-class ChatSessionModel {
-  Id id = Isar.autoIncrement;
+  TextColumn get model => text().withLength(min: 1, max: 255)();
 
-  late String title;
+  TextColumn get systemPrompt => text().withLength(min: 0, max: 1000)();
 
-  late String model;
+  DateTimeColumn get createdAt => dateTime()();
 
-  late String systemPrompt;
+  DateTimeColumn get lastUpdatedAt => dateTime()();
 
-  late DateTime createdAt;
+  BoolColumn get pinned => boolean().withDefault(const Constant(false))();
 
-  late DateTime lastUpdatedAt;
-
-  bool pinned = false;
-
-  int messageCount = 0;
-
-  ChatSession toEntity() {
-    return ChatSession(
-      id: id,
-      title: title,
-      model: model,
-      systemPrompt: systemPrompt,
-      createdAt: createdAt,
-      lastUpdatedAt: lastUpdatedAt,
-      pinned: pinned,
-      messageCount: messageCount,
-    );
-  }
-
-  static ChatSessionModel fromEntity(ChatSession entity) {
-    return ChatSessionModel()
-      ..id = entity.id
-      ..title = entity.title
-      ..model = entity.model
-      ..systemPrompt = entity.systemPrompt
-      ..createdAt = entity.createdAt
-      ..lastUpdatedAt = entity.lastUpdatedAt
-      ..pinned = entity.pinned
-      ..messageCount = entity.messageCount;
-  }
+  IntColumn get messageCount => integer().withDefault(const Constant(0))();
 }

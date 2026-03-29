@@ -1,41 +1,16 @@
-import 'package:isar/isar.dart';
+import 'package:drift/drift.dart';
 
-import '../../domain/entities/ollama_model.dart';
+@DataClassName('OllamaModelModel')
+class OllamaModels extends Table {
+  IntColumn get id => integer().autoIncrement()();
 
-part 'ollama_model_model.g.dart';
+  TextColumn get name => text().withLength(min: 1, max: 255)();
 
-@collection
-class OllamaModelModel {
-  Id id = Isar.autoIncrement;
+  TextColumn get tag => text().withLength(min: 1, max: 255)();
 
-  late String name;
+  IntColumn get size => integer()();
 
-  late String tag;
+  DateTimeColumn get installedAt => dateTime()();
 
-  late int size;
-
-  late DateTime installedAt;
-
-  late DateTime lastUsedAt;
-
-  OllamaModel toEntity() {
-    return OllamaModel(
-      id: id,
-      name: name,
-      tag: tag,
-      size: size,
-      installedAt: installedAt,
-      lastUsedAt: lastUsedAt,
-    );
-  }
-
-  static OllamaModelModel fromEntity(OllamaModel entity) {
-    return OllamaModelModel()
-      ..id = entity.id
-      ..name = entity.name
-      ..tag = entity.tag
-      ..size = entity.size
-      ..installedAt = entity.installedAt
-      ..lastUsedAt = entity.lastUsedAt;
-  }
+  DateTimeColumn get lastUsedAt => dateTime()();
 }
