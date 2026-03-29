@@ -1,0 +1,39 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../data/repositories/model_repository_impl.dart';
+import '../../data/datasources/ollama_remote_datasource.dart';
+import '../../domain/entities/ollama_model.dart';
+
+part 'models_provider.g.dart';
+
+@riverpod
+class ModelsProvider extends _$ModelsProvider {
+  late final ModelRepositoryImpl repository;
+
+  @override
+  Future<List<OllamaModel>> build() async {
+    repository = ModelRepositoryImpl(OllamaRemoteDatasource());
+    return await repository.fetchModels();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    try {
+      final models = await repository.fetchModels();
+      state = AsyncValue.data(models);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Stream<Map<String, dynamic>> pullModel(String modelName) {
+    return repository.pullModel(modelName);
+  }
+
+  Future<void> deleteModel(String modelName) async {
+    await repository.deleteModel(modelName);
+    await refresh();
+  }
+}
+
+final modelsProvider = modelsProviderProvider;
