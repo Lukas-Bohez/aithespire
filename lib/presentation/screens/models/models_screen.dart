@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/models_provider.dart';
+import '../../providers/dio_provider.dart';
 import 'widgets/model_card.dart';
 import 'widgets/pull_progress_tile.dart';
 
@@ -59,8 +60,8 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
   }
 
   Future<void> _pullModel(String modelName) async {
-    final notifier = ref.read(modelsProvider.notifier);
-    await for (final event in notifier.pullModel(modelName)) {
+    final datasource = ref.read(ollamaRemoteDatasourceProvider);
+    await for (final event in datasource.pullModelStream(modelName)) {
       if (event['status'] == 'downloading') {
         final total = (event['total'] as num?)?.toDouble() ?? 0;
         final completed = (event['completed'] as num?)?.toDouble() ?? 0;
@@ -74,7 +75,7 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
           _progress = 1.0;
           _progressInfo = 'Completed';
         });
-        notifier.refresh();
+        ref.refresh(modelsProvider);
       } else {
         setState(() {
           _progressInfo = event['status']?.toString() ?? '';

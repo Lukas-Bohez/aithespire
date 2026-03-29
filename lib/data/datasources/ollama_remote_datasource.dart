@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../domain/entities/ollama_model.dart';
 
 class OllamaRemoteDatasource {
   OllamaRemoteDatasource({required Dio dio}) : _dio = dio;
@@ -25,17 +26,18 @@ class OllamaRemoteDatasource {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchModels() async {
-    debugPrint('Fetching models from: ${_dio.options.baseUrl}${AppConstants.ollamaApiTagsPath}');
-    final response = await _dio.get(AppConstants.ollamaApiTagsPath);
-    if (response.statusCode == 200 && response.data is List) {
-      return List<Map<String, dynamic>>.from(response.data);
+  Future<List<OllamaModel>> fetchModels() async {
+    debugPrint('GET ${_dio.options.baseUrl}${AppConstants.ollamaApiTagsPath}');
+    try {
+      final response = await _dio.get(AppConstants.ollamaApiTagsPath);
+      final list = response.data['models'] as List<dynamic>;
+      return list
+          .map((e) => OllamaModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } on DioException catch (e) {
+      debugPrint('fetchModels error: ${e.type} ${e.message}');
+      throw Exception('Cannot reach Ollama: ${e.message}');
     }
-    throw DioError(
-      requestOptions: response.requestOptions,
-      response: response,
-      type: DioExceptionType.badResponse,
-    );
   }
 
   Future<Map<String, dynamic>> modelInfo(String modelName) async {

@@ -32,4 +32,17 @@ class OllamaModel {
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
     );
   }
+
+  factory OllamaModel.fromJson(Map<String, dynamic> json) {
+    return OllamaModel(
+      id: json['id'] is int ? json['id'] as int : 0,
+      name: json['name']?.toString() ?? '',
+      tag: json['tag']?.toString() ?? '',
+      size: json['size'] is int
+          ? json['size'] as int
+          : int.tryParse(json['size']?.toString() ?? '0') ?? 0,
+      installedAt: DateTime.tryParse(json['installedAt'] ?? '') ?? DateTime.now(),
+      lastUsedAt: DateTime.tryParse(json['lastUsedAt'] ?? '') ?? DateTime.now(),
+    );
+  }
 }

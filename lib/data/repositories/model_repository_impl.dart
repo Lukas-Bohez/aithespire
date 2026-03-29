@@ -11,30 +11,10 @@ class ModelRepositoryImpl implements ModelRepository {
   @override
   Future<List<OllamaModel>> fetchModels() async {
     final result = await remoteDatasource.fetchModels();
-    final models = result
-        .map(
-          (data) {
-            final name = data['name']?.toString() ?? '';
-            final tag = data['tag']?.toString() ?? '';
-            final size = data['size'] is int
-                ? data['size'] as int
-                : int.tryParse(data['size']?.toString() ?? '0') ?? 0;
-            final now = DateTime.now();
-            return OllamaModel(
-              id: _cache.containsKey(name) ? _cache[name]!.id : _cache.length + 1,
-              name: name,
-              tag: tag,
-              size: size,
-              installedAt: now,
-              lastUsedAt: now,
-            );
-          },
-        )
-        .toList();
-    for (final model in models) {
+    for (final model in result) {
       _cache[model.name] = model;
     }
-    return models;
+    return result;
   }
 
   @override
