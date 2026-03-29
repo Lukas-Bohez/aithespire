@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'core/constants/app_constants.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/chat/chat_screen.dart';
 import 'presentation/screens/models/models_screen.dart';
@@ -46,7 +47,7 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'AIthespire',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
