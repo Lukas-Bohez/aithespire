@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/datasources/ollama_remote_datasource.dart';
+import 'package:ai_the_spire/data/datasources/ollama_remote_datasource.dart';
 import '../../widgets/app_scaffold.dart';
 
 class HomeScreen extends StatefulWidget {
