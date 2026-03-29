@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'ollama_status_banner.dart';
-import '../screens/home/home_screen.dart';
 
 class AppScaffold extends StatelessWidget {
   final Widget child;
