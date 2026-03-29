@@ -24,7 +24,13 @@ class App extends ConsumerWidget {
         builder: (context, state, child) => AppScaffold(child: child),
         routes: <GoRoute>[
           GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-          GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) {
+              final extraModel = state.extra is String ? state.extra as String : null;
+              return ChatScreen(initialModel: extraModel);
+            },
+          ),
           GoRoute(path: '/models', builder: (context, state) => const ModelsScreen()),
           GoRoute(path: '/sessions', builder: (context, state) => const SessionsScreen()),
           GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),

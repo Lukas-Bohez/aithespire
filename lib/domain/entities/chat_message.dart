@@ -5,6 +5,8 @@ class ChatMessage {
   final String content;
   final DateTime createdAt;
   final bool isStreaming;
+  final bool isError;
+  final String? retryContent;
 
   ChatMessage({
     required this.id,
@@ -13,6 +15,8 @@ class ChatMessage {
     required this.content,
     required this.createdAt,
     this.isStreaming = false,
+    this.isError = false,
+    this.retryContent,
   });
 
   ChatMessage copyWith({
@@ -22,6 +26,8 @@ class ChatMessage {
     String? content,
     DateTime? createdAt,
     bool? isStreaming,
+    bool? isError,
+    String? retryContent,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -30,6 +36,8 @@ class ChatMessage {
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       isStreaming: isStreaming ?? this.isStreaming,
+      isError: isError ?? this.isError,
+      retryContent: retryContent ?? this.retryContent,
     );
   }
 }

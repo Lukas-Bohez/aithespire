@@ -67,10 +67,11 @@ class OllamaRemoteDatasource {
     }
   }
 
-  Stream<Map<String, dynamic>> pullModelStream(String modelName) async* {
+  Stream<Map<String, dynamic>> pullModelStream(String modelName, {CancelToken? cancelToken}) async* {
     final response = await _dio.post(
       AppConstants.ollamaApiPullPath,
       data: {'model': modelName},
+      cancelToken: cancelToken,
       options: Options(responseType: ResponseType.stream),
     );
 

@@ -21,7 +21,34 @@ class ChatProvider extends _$ChatProvider {
     required List<Map<String, dynamic>> messages,
     String? systemPrompt,
   }) async {
-    state = const AsyncValue.loading();
+    final existing = state.maybeWhen(data: (value) => value, orElse: () => <ChatMessage>[]);
+
+    final userContent = messages
+            .lastWhere((m) => m['role'] == 'user', orElse: () => <String, dynamic>{})['content']
+            ?.toString() ??
+        '';
+
+    final userMessage = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch,
+      sessionId: sessionId,
+      role: 'user',
+      content: userContent,
+      createdAt: DateTime.now(),
+      isStreaming: false,
+    );
+
+    state = AsyncValue.data([...existing, userMessage]);
+
+    final buffer = StringBuffer();
+    ChatMessage assistantMessage = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch + 1,
+      sessionId: sessionId,
+      role: 'assistant',
+      content: '',
+      createdAt: DateTime.now(),
+      isStreaming: true,
+    );
+    state = AsyncValue.data([...existing, userMessage, assistantMessage]);
 
     try {
       final dio = ref.read(dioProvider);
@@ -31,44 +58,58 @@ class ChatProvider extends _$ChatProvider {
         messages: messages,
         systemPrompt: systemPrompt ?? AppConstants.defaultSystemPrompt,
       );
-      final List<ChatMessage> collected = [];
-      final buffer = StringBuffer();
+
       await for (final chunk in stream) {
         buffer.write(chunk);
-        state = AsyncValue.data([
-          ...collected,
-          ChatMessage(
-            id: DateTime.now().millisecondsSinceEpoch,
-            sessionId: sessionId,
-            role: 'assistant',
-            content: buffer.toString(),
-            createdAt: DateTime.now(),
-            isStreaming: true,
-          ),
-        ]);
+        assistantMessage = assistantMessage.copyWith(
+          content: buffer.toString(),
+          isStreaming: true,
+        );
+
+        state = AsyncValue.data([...existing, userMessage, assistantMessage]);
       }
-      final finalMessage = ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch,
+
+      assistantMessage = assistantMessage.copyWith(isStreaming: false);
+      state = AsyncValue.data([...existing, userMessage, assistantMessage]);
+    } on DioException catch (e) {
+      final errorMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch + 2,
         sessionId: sessionId,
         role: 'assistant',
-        content: buffer.toString(),
+        content: 'Send failed: ${e.message ?? 'unknown error'}',
         createdAt: DateTime.now(),
         isStreaming: false,
+        isError: true,
+        retryContent: userContent,
       );
-      collected.add(finalMessage);
-      state = AsyncValue.data(collected);
-    } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionError ||
-          e.type == DioExceptionType.connectionTimeout) {
-        state = AsyncValue.error(
-            Exception('Cannot reach Ollama. Is it running?'),
-            StackTrace.current);
-      } else {
-        state = AsyncValue.error(e, StackTrace.current);
-      }
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      state = AsyncValue.data([...existing, userMessage, errorMessage]);
+    } catch (e) {
+      final errorMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch + 2,
+        sessionId: sessionId,
+        role: 'assistant',
+        content: 'Send failed: ${e.toString()}',
+        createdAt: DateTime.now(),
+        isStreaming: false,
+        isError: true,
+        retryContent: userContent,
+      );
+      state = AsyncValue.data([...existing, userMessage, errorMessage]);
     }
+  }
+
+  Future<void> retryMessage({
+    required String sessionId,
+    required String model,
+    required String retryContent,
+  }) async {
+    await sendMessage(
+      sessionId: sessionId,
+      model: model,
+      messages: [
+        {'role': 'user', 'content': retryContent}
+      ],
+    );
   }
 }
 

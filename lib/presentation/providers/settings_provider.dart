@@ -90,6 +90,10 @@ class SettingsProvider extends _$SettingsProvider {
       fontSize: Value(settings.fontSize),
     ));
   }
+
+  void updateDefaultModel(String modelName) {
+    state = state.copyWith(defaultModel: modelName);
+  }
 }
 
 final settingsProvider = settingsProviderProvider;

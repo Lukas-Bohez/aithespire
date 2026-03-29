@@ -1,11 +1,11 @@
-import 'dart:io';
-
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/models_provider.dart';
 import '../../providers/dio_provider.dart';
-import 'widgets/model_card.dart';
-import 'widgets/pull_progress_tile.dart';
+import '../../providers/settings_provider.dart';
+import '../../../domain/entities/ollama_model.dart';
 
 class ModelsScreen extends ConsumerStatefulWidget {
   const ModelsScreen({super.key});
@@ -16,8 +16,14 @@ class ModelsScreen extends ConsumerStatefulWidget {
 
 class _ModelsScreenState extends ConsumerState<ModelsScreen> {
   final _pullController = TextEditingController();
-  double _progress = 0;
-  String _progressInfo = '';
+  String? _selectedModelName;
+  bool _showPullPanel = false;
+  bool _isPulling = false;
+  double _pullProgress = 0;
+  String _pullInfo = '';
+  CancelToken? _cancelToken;
+
+  final _suggestedModels = ['tinyllama', 'llama3.2:1b', 'phi3:mini', 'gemma2:2b'];
 
   @override
   void dispose() {
@@ -25,162 +31,300 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
     super.dispose();
   }
 
-  Widget _recommendedModelTile(String model, String size, String ram) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(model, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text('Size: $size'),
-          Text('RAM needed: $ram'),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.shade600,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text(
-              'Recommended for mobile',
-              style: TextStyle(color: Colors.white, fontSize: 10),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _selectModel(String modelName) {
+    setState(() {
+      _selectedModelName = modelName;
+      _showPullPanel = false;
+    });
+    ref.read(settingsProvider.notifier).updateDefaultModel(modelName);
   }
 
   Future<void> _pullModel(String modelName) async {
     final datasource = ref.read(ollamaRemoteDatasourceProvider);
-    await for (final event in datasource.pullModelStream(modelName)) {
-      if (event['status'] == 'downloading') {
-        final total = (event['total'] as num?)?.toDouble() ?? 0;
-        final completed = (event['completed'] as num?)?.toDouble() ?? 0;
-        setState(() {
-          _progress = total <= 0 ? 0 : (completed / total).clamp(0.0, 1.0);
-          _progressInfo =
-              'Downloading ${(100 * _progress).toStringAsFixed(1)}%';
-        });
-      } else if (event['status'] == 'success') {
-        setState(() {
-          _progress = 1.0;
-          _progressInfo = 'Completed';
-        });
+    _cancelToken?.cancel();
+    _cancelToken = CancelToken();
+
+    setState(() {
+      _isPulling = true;
+      _pullProgress = 0;
+      _pullInfo = 'Starting pull...';
+    });
+
+    try {
+      await for (final event in datasource.pullModelStream(modelName, cancelToken: _cancelToken)) {
+        if (_cancelToken?.isCancelled ?? false) break;
+
+        if (event['status'] == 'downloading') {
+          final total = (event['total'] as num?)?.toDouble() ?? 0;
+          final completed = (event['completed'] as num?)?.toDouble() ?? 0;
+          setState(() {
+            _pullProgress = total <= 0 ? 0 : (completed / total).clamp(0.0, 1.0);
+            _pullInfo = 'Downloading ${(100 * _pullProgress).toStringAsFixed(1)}%';
+          });
+        } else if (event['status'] == 'success') {
+          setState(() {
+            _pullProgress = 1.0;
+            _pullInfo = 'Completed';
+          });
+        } else {
+          setState(() {
+            _pullInfo = event['status']?.toString() ?? '';
+          });
+        }
+      }
+      if (!(_cancelToken?.isCancelled ?? false)) {
         ref.refresh(modelsProvider);
+      }
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        setState(() {
+          _pullInfo = 'Pull canceled';
+        });
       } else {
         setState(() {
-          _progressInfo = event['status']?.toString() ?? '';
+          _pullInfo = 'Pull failed: ${e.message}';
         });
       }
+    } catch (e) {
+      setState(() {
+        _pullInfo = 'Pull failed: $e';
+      });
+    } finally {
+      setState(() {
+        _isPulling = false;
+      });
+    }
+  }
+
+  Future<void> _deleteModel(String modelName) async {
+    final datasource = ref.read(ollamaRemoteDatasourceProvider);
+    try {
+      await datasource.deleteModel(modelName);
+      ref.refresh(modelsProvider);
+      if (_selectedModelName == modelName) {
+        _selectedModelName = null;
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
     final modelsState = ref.watch(modelsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Models')),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _pullController,
-              decoration: InputDecoration(
-                labelText: 'Model name',
-                hintText: 'e.g. llama3',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.download),
-                  onPressed: () {
-                    final name = _pullController.text.trim();
-                    if (name.isNotEmpty) {
-                      _pullModel(name);
-                    }
-                  },
-                ),
-              ),
-            ),
-            if (_progress > 0 && _progress < 1)
-              PullProgressTile(progress: _progress, info: _progressInfo),
-            if (Platform.isAndroid) ...[
-              const Text(
-                'Recommended Android models',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 120,
-                child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: modelsState.when(
+          data: (models) {
+            if (_selectedModelName == null || !_selectedModelName.toString().isNotEmpty) {
+              _selectedModelName = models.firstWhere(
+                (model) => model.name == settings.defaultModel,
+                orElse: () => models.isNotEmpty ? models.first : OllamaModel(id: 0, name: '', tag: '', size: 0, installedAt: DateTime.now(), lastUsedAt: DateTime.now()),
+              ).name;
+            }
+
+            final selectedModel = models.firstWhere(
+              (m) => m.name == _selectedModelName,
+              orElse: () => models.isNotEmpty
+                  ? models.first
+                  : OllamaModel(id: 0, name: '', tag: '', size: 0, installedAt: DateTime.now(), lastUsedAt: DateTime.now()),
+            );
+
+            final hasModel = models.isNotEmpty && selectedModel.name.isNotEmpty;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  children: [
-                    _recommendedModelTile('tinyllama', '637 MB', '2 GB'),
-                    _recommendedModelTile('llama3.2:1b', '1.3 GB', '3 GB'),
-                    _recommendedModelTile('llama3.2:3b', '2.0 GB', '4 GB'),
-                    _recommendedModelTile('phi3:mini', '2.3 GB', '4 GB'),
-                    _recommendedModelTile('gemma2:2b', '1.6 GB', '3 GB'),
-                    _recommendedModelTile('mistral:7b', '4.1 GB', '8 GB'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            Expanded(
-              child: modelsState.when(
-                data: (models) {
-                  return GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 3,
+                  child: Row(
+                    children: models.map((model) {
+                      final isSelected = model.name == selectedModel.name;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(model.name),
+                          selected: isSelected,
+                          onSelected: (_) => _selectModel(model.name),
+                          selectedColor: Theme.of(context).colorScheme.primaryContainer,
                         ),
-                    itemCount: models.length,
-                    itemBuilder: (context, index) {
-                      final model = models[index];
-                      return ModelCard(model: model);
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, st) => Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.wifi_off_rounded,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.outline),
-                      const SizedBox(height: 16),
-                      Text('Ollama is not running',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Start Ollama on your machine to see your models.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (hasModel)
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedModel.name,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text('Size: ${selectedModel.size}'),
+                          const SizedBox(height: 4),
+                          Chip(label: Text(selectedModel.tag.isNotEmpty ? selectedModel.tag : 'unknown tag')),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: () => ref.refresh(modelsProvider),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
+                    ),
+                  )
+                else
+                  const Center(child: Text('No models installed.')),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      if (_showPullPanel) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _pullController,
+                                decoration: const InputDecoration(
+                                  hintText: 'e.g. llama3, phi3:mini, mistral',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              onPressed: _isPulling
+                                  ? null
+                                  : () {
+                                      final name = _pullController.text.trim();
+                                      if (name.isNotEmpty) {
+                                        _pullModel(name);
+                                      }
+                                    },
+                              child: const Text('Start Pull'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(value: _pullProgress),
+                        const SizedBox(height: 4),
+                        Text(_pullInfo),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _isPulling
+                                ? () {
+                                    _cancelToken?.cancel();
+                                    setState(() {
+                                      _isPulling = false;
+                                      _pullInfo = 'Canceled';
+                                    });
+                                  }
+                                : () {
+                                    setState(() {
+                                      _showPullPanel = false;
+                                    });
+                                  },
+                            child: Text(_isPulling ? 'Cancel' : 'Close'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _suggestedModels.map((model) {
+                            return ActionChip(
+                              label: Text(model),
+                              onPressed: () {
+                                setState(() {
+                                  _pullController.text = model;
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ]
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton(
+                        onPressed: hasModel
+                            ? () => context.go('/chat', extra: selectedModel.name)
+                            : null,
+                        child: const Text('Chat with this model'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _showPullPanel = !_showPullPanel;
+                          });
+                        },
+                        child: const Text('Pull new model'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: hasModel
+                            ? () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete model?'),
+                                    content: Text('Delete ${selectedModel.name}?'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+                                      TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true) {
+                                  await _deleteModel(selectedModel.name);
+                                }
+                              }
+                            : null,
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete this model'),
                       ),
                     ],
                   ),
                 ),
-              ),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, st) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.wifi_off_rounded,
+                    size: 48, color: Theme.of(context).colorScheme.outline),
+                const SizedBox(height: 16),
+                Text('Ollama is not running', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text('Start Ollama on your machine to see your models.',
+                    style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () => ref.refresh(modelsProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
             ),
-            TextButton(onPressed: () {}, child: const Text('Browse Models')),
-          ],
+          ),
         ),
       ),
     );

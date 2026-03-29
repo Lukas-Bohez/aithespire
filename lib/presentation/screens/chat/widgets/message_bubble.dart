@@ -5,8 +5,9 @@ import 'markdown_message.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
+  final VoidCallback? onRetry;
 
-  const MessageBubble({super.key, required this.message});
+  const MessageBubble({super.key, required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -26,18 +27,31 @@ class MessageBubble extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
-            color: background,
+            color: message.isError ? Colors.red.shade50 : background,
             borderRadius: BorderRadius.circular(14),
+            border: message.isError
+                ? Border.all(color: Colors.red.shade300)
+                : null,
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!isUser)
                 const Padding(
-                  padding: EdgeInsets.only(right: 8),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Icon(Icons.smart_toy, size: 20),
                 ),
-              Expanded(child: MarkdownMessage(content: message.content)),
+              MarkdownMessage(content: message.content),
+              if (message.isError && onRetry != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: onRetry,
+                    child: const Text('Retry'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
