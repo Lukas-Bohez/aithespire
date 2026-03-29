@@ -145,6 +145,26 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
     }
   }
 
+  Color _familyColor(String name) {
+    if (name.contains('llama')) return Colors.orange;
+    if (name.contains('phi')) return Colors.blue;
+    if (name.contains('gemma')) return Colors.green;
+    if (name.contains('mistral')) return Colors.purple;
+    if (name.contains('qwen')) return Colors.red;
+    if (name.contains('dolphin')) return Colors.teal;
+    return Colors.grey;
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    final mb = kb / 1024;
+    if (mb < 1024) return '${mb.toStringAsFixed(1)} MB';
+    final gb = mb / 1024;
+    return '${gb.toStringAsFixed(1)} GB';
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
@@ -175,189 +195,133 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: models.map((model) {
-                      final isSelected = model.name == selectedModel.name;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(model.name),
-                          selected: isSelected,
-                          onSelected: (_) => _selectModel(model.name),
-                          selectedColor: Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                const Text('Installed models', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                if (hasModel)
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            selectedModel.name,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Text('Size: ${selectedModel.size}'),
-                          const SizedBox(height: 4),
-                          Chip(label: Text(selectedModel.tag.isNotEmpty ? selectedModel.tag : 'unknown tag')),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  const Center(child: Text('No models installed.')),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView(
+                if (models.isEmpty)
+                  Column(
                     children: [
-                      if (_showPullPanel) ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _pullController,
-                                decoration: const InputDecoration(
-                                  hintText: 'e.g. llama3, phi3:mini, mistral',
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      Icon(Icons.storage_outlined, size: 64, color: Colors.grey.shade400),
+                      const SizedBox(height: 16),
+                      const Text('No models installed', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      const Text('Pull a model below to get started', style: TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                if (models.isNotEmpty)
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: models.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, idx) {
+                        final model = models[idx];
+                        final isSelected = model.name == selectedModel.name;
+                        final family = model.name.toLowerCase();
+                        final color = _familyColor(family);
+                        return Container(
+                          decoration: isSelected
+                              ? BoxDecoration(
+                                  border: Border(left: BorderSide(color: const Color(0xFF3D3BF3), width: 4)),
+                                  color: Colors.grey.shade50,
+                                )
+                              : null,
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: color,
+                              child: const Icon(Icons.storage, color: Colors.white),
+                            ),
+                            title: Text(model.name, style: const TextStyle(fontWeight: FontWeight.w600, overflow: TextOverflow.ellipsis)),
+                            subtitle: Text('${_formatSize(model.size)}'),
+                            trailing: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              children: [
+                                FilledButton(
+                                  onPressed: () => context.go('/chat', extra: model.name),
+                                  child: const Text('Chat'),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            FilledButton(
-                              onPressed: _isPulling
-                                  ? null
-                                  : () {
-                                      final name = _pullController.text.trim();
-                                      if (name.isNotEmpty) {
-                                        _pullModel(name);
-                                      }
-                                    },
-                              child: const Text('Start Pull'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(value: _pullProgress),
-                        const SizedBox(height: 4),
-                        Text(_pullInfo),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _isPulling
-                                ? () {
-                                    _cancelToken?.cancel();
-                                    setState(() {
-                                      _isPulling = false;
-                                      _pullInfo = 'Canceled';
-                                    });
-                                  }
-                                : () {
-                                    setState(() {
-                                      _showPullPanel = false;
-                                    });
-                                  },
-                            child: Text(_isPulling ? 'Cancel' : 'Close'),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: _suggestedModelsByCategory.entries.expand((entry) {
-                              final category = entry.key;
-                              final categoryModels = entry.value;
-                              return [
-                                Text(category, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: categoryModels.map((model) {
-                                    final name = model['name']!;
-                                    final size = model['size']!;
-                                    return ActionChip(
-                                      label: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                          Text(size, style: Theme.of(context).textTheme.bodySmall),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  onPressed: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete model?'),
+                                        content: Text('Delete ${model.name}?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+                                          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
                                         ],
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _pullController.text = name;
-                                        });
-                                      },
                                     );
-                                  }).toList(),
+                                    if (confirmed == true) {
+                                      await _deleteModel(model.name);
+                                    }
+                                  },
                                 ),
-                                const SizedBox(height: 16),
-                              ];
-                            }).toList(),
+                              ],
+                            ),
+                            onTap: () => _selectModel(model.name),
                           ),
+                        );
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                const Text('Add a model', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _pullController,
+                        decoration: const InputDecoration(
+                          hintText: 'Model name e.g. llama3, phi4',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                      ]
-                    ],
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FilledButton(
-                        onPressed: hasModel
-                            ? () => context.go('/chat', extra: selectedModel.name)
-                            : null,
-                        child: const Text('Chat with this model'),
                       ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _showPullPanel = !_showPullPanel;
-                          });
-                        },
-                        child: const Text('Pull new model'),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: hasModel
-                            ? () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Delete model?'),
-                                    content: Text('Delete ${selectedModel.name}?'),
-                                    actions: [
-                                      TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-                                      TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                    ],
-                                  ),
-                                );
-                                if (confirmed == true) {
-                                  await _deleteModel(selectedModel.name);
-                                }
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _isPulling
+                          ? null
+                          : () {
+                              final name = _pullController.text.trim();
+                              if (name.isNotEmpty) {
+                                _pullModel(name);
                               }
-                            : null,
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Delete this model'),
-                      ),
-                    ],
-                  ),
+                            },
+                      child: const Text('Pull'),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                LinearProgressIndicator(value: _isPulling ? _pullProgress : null),
+                const SizedBox(height: 4),
+                Text(_pullInfo, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _suggestedModelsByCategory.entries.expand((entry) {
+                    final category = entry.key;
+                    final categoryModels = entry.value;
+                    return [
+                      Chip(label: Text(category)),
+                      ...categoryModels.take(3).map((m) {
+                        final name = m['name']!;
+                        return ActionChip(
+                          label: Text(name),
+                          onPressed: () => setState(() {
+                            _pullController.text = name;
+                          }),
+                        );
+                      }),
+                    ];
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
               ],
             );
           },

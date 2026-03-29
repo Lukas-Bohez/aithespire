@@ -76,73 +76,111 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     final availableModels = modelsState.maybeWhen(data: (models) => models.map((m) => m.name).toList(), orElse: () => <String>[]);
+    final hasTyping = messages.any((m) => m.isStreaming);
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.add),
-          tooltip: 'New Chat',
-          onPressed: () {
-            ref.read(chatProvider.notifier).resetSession();
+        elevation: 0,
+        title: GestureDetector(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              builder: (context) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Select model', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    ...availableModels.map((model) {
+                      return ListTile(
+                        title: Text(model),
+                        selected: model == currentModel,
+                        onTap: () {
+                          setState(() {
+                            _activeModel = model;
+                          });
+                          ref.read(settingsProvider.notifier).updateDefaultModel(model);
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                );
+              },
+            );
           },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3D3BF3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              currentModel,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
         ),
-        title: Row(
-          children: [
-            const Text('Chat'),
-            const SizedBox(width: 12),
-            if (currentModel.isNotEmpty)
-              PopupMenuButton<String>(
-                tooltip: 'Select model',
-                initialValue: currentModel,
-                onSelected: (model) {
-                  setState(() {
-                    _activeModel = model;
-                  });
-                  ref.read(settingsProvider.notifier).updateDefaultModel(model);
-                },
-                itemBuilder: (context) {
-                  if (availableModels.isEmpty) {
-                    return [
-                      const PopupMenuItem(value: '', child: Text('No models available')),
-                    ];
-                  }
-                  return availableModels
-                      .map(
-                        (name) => PopupMenuItem(
-                          value: name,
-                          child: Text(name),
-                        ),
-                      )
-                      .toList();
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(currentModel, style: const TextStyle(fontSize: 14)),
-                      const Icon(Icons.expand_more, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'New Chat',
+            onPressed: () {
+              ref.read(chatProvider.notifier).resetSession();
+              _controller.clear();
+              _scrollToBottom();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
           Expanded(
             child: messages.isEmpty
-                ? const Center(child: Text('Start the conversation.'))
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: CustomPaint(
+                            painter: _LargeSparkPainter(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('AIthespire', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        const Text('Ask anything. Runs locally.', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            'Explain quantum computing',
+                            'Write me a Python script',
+                            'What are you capable of?'
+                          ].map((prompt) {
+                            return ActionChip(
+                              label: Text(prompt),
+                              onPressed: () {
+                                _controller.text = prompt;
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: messages.length,
+                    itemCount: messages.length + (hasTyping ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (hasTyping && index == messages.length) {
+                        return _TypingIndicator();
+                      }
                       final msg = messages[index];
                       return MessageBubble(
                         message: msg,
@@ -178,3 +216,94 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 }
+
+class _TypingIndicator extends StatefulWidget {
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: const BoxDecoration(color: Color(0xFF3D3BF3), shape: BoxShape.circle),
+            child: const Center(child: Text('A', style: TextStyle(color: Colors.white, fontSize: 14))),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: const Color(0xFF3D3BF3), width: 3)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (index) {
+                return FadeTransition(
+                  opacity: Tween(begin: 0.3, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: _controller,
+                      curve: Interval(index * 0.2, 0.8 + index * 0.05, curve: Curves.easeInOut),
+                    ),
+                  ),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(color: Color(0xFF3D3BF3), shape: BoxShape.circle),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LargeSparkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFF3D3BF3);
+    final center = Offset(size.width / 2, size.height / 2);
+    final path = Path();
+    path.moveTo(center.dx, 0);
+    path.lineTo(center.dx + size.width * 0.18, center.dy - size.height * 0.06);
+    path.lineTo(size.width, center.dy);
+    path.lineTo(center.dx + size.width * 0.18, center.dy + size.height * 0.06);
+    path.lineTo(center.dx, size.height);
+    path.lineTo(center.dx - size.width * 0.18, center.dy + size.height * 0.06);
+    path.lineTo(0, center.dy);
+    path.lineTo(center.dx - size.width * 0.18, center.dy - size.height * 0.06);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

@@ -30,9 +30,15 @@ class SessionProvider extends _$SessionProvider {
     }
   }
 
-  Future<void> deleteSession(int id) async {
-    await repository.deleteSession(id);
-    await reload();
+  Future<bool> deleteSession(int id) async {
+    try {
+      await repository.deleteSession(id);
+      await reload();
+      return true;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    }
   }
 
   Future<void> pinSession(int id, bool pinned) async {
