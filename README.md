@@ -2,9 +2,8 @@
 
 ## Private, offline AI chat powered by Ollama (no cloud, no tracking)
 
-![Flutter Analyze](https://img.shields.io/badge/flutter-analyze-blue)
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![CI](https://github.com/Lukas-Bohez/aithespire/actions/workflows/ci.yml/badge.svg)](https://github.com/Lukas-Bohez/aithespire/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/Lukas-Bohez/aithespire/blob/main/LICENSE)
 
 ## Screenshots
 
