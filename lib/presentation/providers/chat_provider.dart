@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/datasources/ollama_remote_datasource.dart';
+import '../../presentation/providers/dio_provider.dart';
 import '../../domain/entities/chat_message.dart';
 
 part 'chat_provider.g.dart';
@@ -13,7 +14,7 @@ class ChatProvider extends _$ChatProvider {
 
   @override
   Future<List<ChatMessage>> build() async {
-    datasource = OllamaRemoteDatasource();
+    datasource = ref.read(ollamaRemoteDatasourceProvider);
     return [];
   }
 
@@ -60,7 +61,9 @@ class ChatProvider extends _$ChatProvider {
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout) {
-        state = AsyncValue.error(Exception('Cannot reach Ollama. Is it running?'), StackTrace.current);
+        state = AsyncValue.error(
+            Exception('Cannot reach Ollama. Is it running?'),
+            StackTrace.current);
       } else {
         state = AsyncValue.error(e, StackTrace.current);
       }

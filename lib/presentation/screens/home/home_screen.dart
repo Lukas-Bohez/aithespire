@@ -1,19 +1,20 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ai_the_spire/data/datasources/ollama_remote_datasource.dart';
+import 'package:ai_the_spire/presentation/providers/dio_provider.dart';
 import '../../widgets/app_scaffold.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final _remote = OllamaRemoteDatasource();
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late final _remote = ref.read(ollamaRemoteDatasourceProvider);
 
   @override
   void initState() {
@@ -31,22 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      selectedIndex: 0,
-      onIndexChanged: (index) {
-        switch (index) {
-          case 0:
-            context.go('/sessions');
-            break;
-          case 1:
-            context.go('/models');
-            break;
-          case 2:
-            context.go('/settings');
-            break;
-        }
-      },
-      child: const Center(child: Text('Welcome to AIthespire')),
-    );
+    return const Center(child: Text('Welcome to AIthespire'));
   }
 }

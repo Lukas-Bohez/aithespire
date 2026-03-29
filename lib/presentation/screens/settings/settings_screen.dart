@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/dio_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -19,8 +20,11 @@ class SettingsScreen extends ConsumerWidget {
             TextFormField(
               initialValue: settings.ollamaBaseUrl,
               decoration: const InputDecoration(labelText: 'Ollama Base URL'),
-              onChanged: (value) =>
-                  notifier.update(settings.copyWith(ollamaBaseUrl: value)),
+              onChanged: (value) {
+                notifier.update(settings.copyWith(ollamaBaseUrl: value));
+                ref.invalidate(ollamaUrlProvider);
+                ref.invalidate(dioProvider);
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(

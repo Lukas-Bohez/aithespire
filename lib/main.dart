@@ -1,9 +1,20 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final dio = Dio(BaseOptions(baseUrl: 'http://localhost:11434'));
+  try {
+    final r = await dio.get('/api/version');
+    debugPrint('✅ Ollama reachable: ${r.data}');
+  } catch (e) {
+    debugPrint('❌ Ollama not reachable: $e');
+    return;
+  }
+
   runApp(
     const ProviderScope(
       child: App(),

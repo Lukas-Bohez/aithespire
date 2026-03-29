@@ -1,20 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/ollama_installer_service.dart';
-import '../../data/datasources/ollama_remote_datasource.dart';
+import '../../presentation/providers/dio_provider.dart';
 
-class OllamaStatusBanner extends StatefulWidget {
+class OllamaStatusBanner extends ConsumerStatefulWidget {
   const OllamaStatusBanner({super.key});
 
   @override
-  State<OllamaStatusBanner> createState() => _OllamaStatusBannerState();
+  ConsumerState<OllamaStatusBanner> createState() => _OllamaStatusBannerState();
 }
 
-class _OllamaStatusBannerState extends State<OllamaStatusBanner> {
+class _OllamaStatusBannerState extends ConsumerState<OllamaStatusBanner> {
   final _installer = OllamaInstallerService();
-  final _datasource = OllamaRemoteDatasource();
+  late final _datasource = ref.read(ollamaRemoteDatasourceProvider);
   bool _visible = true;
   bool _isConnecting = false;
   Timer? _pollTimer;

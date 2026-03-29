@@ -6,16 +6,7 @@ import 'package:dio/dio.dart';
 import '../../core/constants/app_constants.dart';
 
 class OllamaRemoteDatasource {
-  OllamaRemoteDatasource({Dio? dio, String? baseUrl})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: baseUrl ?? AppConstants.ollamaDefaultUrl,
-              connectTimeout: AppConstants.connectTimeout,
-              receiveTimeout: AppConstants.receiveTimeout,
-            ),
-          );
+  OllamaRemoteDatasource({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
 
@@ -46,7 +37,8 @@ class OllamaRemoteDatasource {
   }
 
   Future<Map<String, dynamic>> modelInfo(String modelName) async {
-    final response = await _dio.post(AppConstants.ollamaApiShowPath, data: {'model': modelName});
+    final response = await _dio
+        .post(AppConstants.ollamaApiShowPath, data: {'model': modelName});
     if (response.statusCode == 200 && response.data is Map) {
       return Map<String, dynamic>.from(response.data);
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_constants.dart';
+import 'presentation/widgets/app_scaffold.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/chat/chat_screen.dart';
 import 'presentation/screens/models/models_screen.dart';
@@ -16,21 +17,18 @@ class App extends StatelessWidget {
 
   static final GoRouter router = GoRouter(
     initialLocation: '/',
-    routes: <GoRoute>[
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-      GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
-      GoRoute(
-        path: '/models',
-        builder: (context, state) => const ModelsScreen(),
+    routes: <RouteBase>[
+      ShellRoute(
+        builder: (context, state, child) => AppScaffold(child: child),
+        routes: <GoRoute>[
+          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+          GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
+          GoRoute(path: '/models', builder: (context, state) => const ModelsScreen()),
+          GoRoute(path: '/sessions', builder: (context, state) => const SessionsScreen()),
+          GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+        ],
       ),
       GoRoute(
-        path: '/sessions',
-        builder: (context, state) => const SessionsScreen(),
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
-      ),      GoRoute(
         path: '/setup',
         builder: (context, state) => const AndroidSetupScreen(),
       ),
@@ -41,7 +39,8 @@ class App extends StatelessWidget {
       GoRoute(
         path: '/setup/lan',
         builder: (context, state) => const LanSetupScreen(),
-      ),    ],
+      ),
+    ],
   );
 
   @override
