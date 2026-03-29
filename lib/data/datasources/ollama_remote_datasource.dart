@@ -75,8 +75,8 @@ class OllamaRemoteDatasource {
       options: Options(responseType: ResponseType.stream),
     );
 
-    final stream = response.data.stream
-        .transform(utf8.decoder)
+    final stream = utf8.decoder
+        .bind(response.data.stream)
         .transform(const LineSplitter());
 
     await for (final line in stream) {
@@ -92,43 +92,35 @@ class OllamaRemoteDatasource {
     }
   }
 
-  Stream<String> chatStream({
+  Future<Stream<String>> chatStream({
     required String model,
     required List<Map<String, dynamic>> messages,
     String? systemPrompt,
-  }) async* {
-    final body = {
-      'model': model,
-      'messages': messages,
-      if (systemPrompt != null) 'system': systemPrompt,
-      'stream': true,
-    };
-    final response = await _dio.post(
+  }) async {
+    final response = await _dio.post<ResponseBody>(
       AppConstants.ollamaApiChatPath,
-      data: body,
+      data: {
+        'model': model,
+        'messages': messages,
+        if (systemPrompt != null) 'system': systemPrompt,
+        'stream': true,
+      },
       options: Options(responseType: ResponseType.stream),
     );
 
-    final stream = response.data.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
-    await for (final line in stream) {
-      if (line.trim().isEmpty) continue;
-      try {
-        final event = json.decode(line);
-        if (event is Map<String, dynamic>) {
-          final message = event['message'];
-          if (message is Map<String, dynamic> &&
-              message.containsKey('content')) {
-            yield message['content']?.toString() ?? '';
+    return utf8.decoder
+        .bind(response.data!.stream)
+        .transform(const LineSplitter())
+        .where((line) => line.trim().isNotEmpty)
+        .map((line) {
+          final map = jsonDecode(line);
+          if (map is Map<String, dynamic>) {
+            final message = map['message'] as Map<String, dynamic>?;
+            return (message?['content'] as String?) ?? '';
           }
-          if (event['done'] == true) {
-            break;
-          }
-        }
-      } catch (_) {
-        // ignore malformed chunks
-      }
-    }
+          return '';
+        })
+        .where((content) => content.isNotEmpty);
   }
 }
+

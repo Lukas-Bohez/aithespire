@@ -53,7 +53,7 @@ class ChatProvider extends _$ChatProvider {
     try {
       final dio = ref.read(dioProvider);
       final datasource = OllamaRemoteDatasource(dio: dio);
-      final stream = datasource.chatStream(
+      final stream = await datasource.chatStream(
         model: model,
         messages: messages,
         systemPrompt: systemPrompt ?? AppConstants.defaultSystemPrompt,
