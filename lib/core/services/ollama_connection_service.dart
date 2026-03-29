@@ -14,18 +14,16 @@ class OllamaConnectionService {
   }) : _dio = dio ??
           Dio(
             BaseOptions(
-              baseUrl: AppConstants.defaultOllamaUrl,
-              connectTimeout:
-                  const Duration(seconds: AppConstants.networkTimeoutConnectSeconds),
-              receiveTimeout:
-                  const Duration(seconds: AppConstants.networkTimeoutReceiveSeconds),
+              baseUrl: AppConstants.ollamaDefaultUrl,
+              connectTimeout: AppConstants.connectTimeout,
+              receiveTimeout: AppConstants.receiveTimeout,
             ),
           );
 
   Future<bool> _pingOllama(String url) async {
     try {
       final response = await _dio.get(
-        '$url/api/version',
+        '$url${AppConstants.ollamaApiVersionPath}',
         options: Options(
           sendTimeout: const Duration(seconds: 2),
           receiveTimeout: const Duration(seconds: 2),

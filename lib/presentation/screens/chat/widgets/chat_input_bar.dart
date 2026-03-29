@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_constants.dart';
+
 class ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
@@ -22,6 +24,7 @@ class ChatInputBar extends StatelessWidget {
                 controller: controller,
                 minLines: 1,
                 maxLines: 6,
+                style: TextStyle(fontSize: AppConstants.defaultFontSize),
                 decoration: InputDecoration(
                   hintText: 'Type your message...',
                   border: OutlineInputBorder(

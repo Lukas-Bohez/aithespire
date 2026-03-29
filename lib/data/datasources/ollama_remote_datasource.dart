@@ -11,13 +11,9 @@ class OllamaRemoteDatasource {
           dio ??
           Dio(
             BaseOptions(
-              baseUrl: baseUrl ?? AppConstants.defaultOllamaUrl,
-              connectTimeout: const Duration(
-                seconds: AppConstants.networkTimeoutConnectSeconds,
-              ),
-              receiveTimeout: const Duration(
-                seconds: AppConstants.networkTimeoutReceiveSeconds,
-              ),
+              baseUrl: baseUrl ?? AppConstants.ollamaDefaultUrl,
+              connectTimeout: AppConstants.connectTimeout,
+              receiveTimeout: AppConstants.receiveTimeout,
             ),
           );
 
@@ -25,7 +21,7 @@ class OllamaRemoteDatasource {
 
   Future<bool> checkVersion() async {
     try {
-      final response = await _dio.get('/api/version');
+      final response = await _dio.get(AppConstants.ollamaApiVersionPath);
       return response.statusCode == 200;
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
@@ -38,7 +34,7 @@ class OllamaRemoteDatasource {
   }
 
   Future<List<Map<String, dynamic>>> fetchModels() async {
-    final response = await _dio.get('/api/tags');
+    final response = await _dio.get(AppConstants.ollamaApiTagsPath);
     if (response.statusCode == 200 && response.data is List) {
       return List<Map<String, dynamic>>.from(response.data);
     }
@@ -50,7 +46,7 @@ class OllamaRemoteDatasource {
   }
 
   Future<Map<String, dynamic>> modelInfo(String modelName) async {
-    final response = await _dio.post('/api/show', data: {'model': modelName});
+    final response = await _dio.post(AppConstants.ollamaApiShowPath, data: {'model': modelName});
     if (response.statusCode == 200 && response.data is Map) {
       return Map<String, dynamic>.from(response.data);
     }
@@ -63,7 +59,7 @@ class OllamaRemoteDatasource {
 
   Future<void> deleteModel(String modelName) async {
     final response = await _dio.delete(
-      '/api/delete',
+      AppConstants.ollamaApiDeletePath,
       data: {'model': modelName},
     );
     if (response.statusCode != 200) {
@@ -77,7 +73,7 @@ class OllamaRemoteDatasource {
 
   Stream<Map<String, dynamic>> pullModelStream(String modelName) async* {
     final response = await _dio.post(
-      '/api/pull',
+      AppConstants.ollamaApiPullPath,
       data: {'model': modelName},
       options: Options(responseType: ResponseType.stream),
     );
@@ -111,7 +107,7 @@ class OllamaRemoteDatasource {
       'stream': true,
     };
     final response = await _dio.post(
-      '/api/chat',
+      AppConstants.ollamaApiChatPath,
       data: body,
       options: Options(responseType: ResponseType.stream),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../core/constants/app_constants.dart';
 import '../../data/datasources/ollama_remote_datasource.dart';
 import '../../domain/entities/chat_message.dart';
 
@@ -27,7 +28,7 @@ class ChatProvider extends _$ChatProvider {
       final stream = datasource.chatStream(
         model: model,
         messages: messages,
-        systemPrompt: systemPrompt,
+        systemPrompt: systemPrompt ?? AppConstants.defaultSystemPrompt,
       );
       final List<ChatMessage> collected = [];
       final buffer = StringBuffer();

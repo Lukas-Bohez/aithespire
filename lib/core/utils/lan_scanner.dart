@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../constants/app_constants.dart';
+
 class OllamaLanScanner {
   final Dio _dio;
 
@@ -20,15 +22,16 @@ class OllamaLanScanner {
 
   Future<String?> _tryHost(String ip) async {
     try {
+      final url = 'http://$ip:${AppConstants.ollamaDefaultUrl.split(':').last}${AppConstants.ollamaApiVersionPath}';
       final response = await _dio.get(
-        'http://$ip:11434/api/version',
+        url,
         options: Options(
           sendTimeout: const Duration(milliseconds: 500),
           receiveTimeout: const Duration(milliseconds: 500),
         ),
       );
       if (response.statusCode == 200) {
-        return 'http://$ip:11434';
+        return 'http://$ip:${AppConstants.ollamaDefaultUrl.split(':').last}';
       }
     } catch (_) {
       // ignore

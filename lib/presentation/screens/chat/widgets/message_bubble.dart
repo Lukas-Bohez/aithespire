@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../domain/entities/chat_message.dart';
 import 'markdown_message.dart';
 
@@ -20,7 +21,7 @@ class MessageBubble extends StatelessWidget {
       children: [
         Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.85,
+            maxWidth: MediaQuery.of(context).size.width * AppConstants.maxBubbleWidthFraction,
           ),
           padding: const EdgeInsets.all(12),
           margin: const EdgeInsets.symmetric(vertical: 4),

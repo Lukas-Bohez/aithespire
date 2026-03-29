@@ -6,6 +6,10 @@ import '../../domain/repositories/chat_repository.dart';
 class ChatRepositoryImpl implements ChatRepository {
   final OllamaRemoteDatasource remoteDatasource;
 
+  final List<ChatSession> _sessions = [];
+  final Map<String, List<ChatMessage>> _messages = {};
+  int _nextSessionId = 1;
+
   ChatRepositoryImpl(this.remoteDatasource);
 
   @override
@@ -14,32 +18,33 @@ class ChatRepositoryImpl implements ChatRepository {
     String? systemPrompt,
   }) async {
     final now = DateTime.now();
-    return ChatSession(
-      id: 0,
+    final session = ChatSession(
+      id: _nextSessionId++,
       title: 'New conversation',
       model: model,
       systemPrompt: systemPrompt ?? '',
       createdAt: now,
       lastUpdatedAt: now,
     );
+    _sessions.add(session);
+    _messages[session.id.toString()] = [];
+    return session;
   }
 
   @override
   Future<void> deleteSession(int sessionId) async {
-    // TODO: implement with Isar
-    return;
+    _sessions.removeWhere((session) => session.id == sessionId);
+    _messages.remove(sessionId.toString());
   }
 
   @override
   Future<List<ChatSession>> getSessions() async {
-    // TODO: implement with Isar
-    return [];
+    return List<ChatSession>.from(_sessions);
   }
 
   @override
   Future<List<ChatMessage>> getMessages(String sessionId) async {
-    // TODO: implement with Isar
-    return [];
+    return List<ChatMessage>.from(_messages[sessionId] ?? []);
   }
 
   @override
@@ -59,7 +64,20 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   Future<ChatMessage> storeMessage(ChatMessage message) async {
-    // TODO: persist to Isar
+    final sessionMessages = _messages[message.sessionId.toString()];
+    if (sessionMessages != null) {
+      sessionMessages.add(message);
+    } else {
+      _messages[message.sessionId.toString()] = [message];
+    }
+
+    final sessionIndex = _sessions.indexWhere((s) => s.id == message.sessionId);
+    if (sessionIndex != -1) {
+      final session = _sessions[sessionIndex];
+      _sessions[sessionIndex] = session.copyWith(lastUpdatedAt: DateTime.now());
+    }
+
     return message;
   }
 }
+
