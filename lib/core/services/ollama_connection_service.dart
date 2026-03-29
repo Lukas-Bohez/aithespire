@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:logging/logging.dart';
 
 import '../constants/app_constants.dart';
+
+final Logger log = Logger('OllamaConnectionService');
 
 enum AndroidOllamaMode { termux, ollamaServer, lan, notConfigured }
 
@@ -14,23 +17,31 @@ class OllamaConnectionService {
   }) : _dio = dio ??
           Dio(
             BaseOptions(
-              baseUrl: AppConstants.ollamaDefaultUrl,
+              baseUrl: AppConstants.ollamaDefaultUrl.replaceAll(RegExp(r'/+$'), ''),
               connectTimeout: AppConstants.connectTimeout,
               receiveTimeout: AppConstants.receiveTimeout,
             ),
           );
 
   Future<bool> _pingOllama(String url) async {
+    final normalizedUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+    final pingUrl = Uri.parse(normalizedUrl)
+        .resolve(AppConstants.ollamaApiVersionPath)
+        .toString();
+
+    log.info('Pinging Ollama at: $pingUrl');
+
     try {
       final response = await _dio.get(
-        '$url${AppConstants.ollamaApiVersionPath}',
+        pingUrl,
         options: Options(
           sendTimeout: const Duration(seconds: 2),
           receiveTimeout: const Duration(seconds: 2),
         ),
       );
       return response.statusCode == 200;
-    } catch (_) {
+    } catch (e, st) {
+      log.warning('Ping to Ollama failed', e, st);
       return false;
     }
   }
