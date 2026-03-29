@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_constants.dart';
+import 'presentation/providers/settings_provider.dart';
 import 'presentation/widgets/app_scaffold.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/chat/chat_screen.dart';
@@ -12,7 +14,7 @@ import 'presentation/screens/setup/android_setup_screen.dart';
 import 'presentation/screens/setup/lan_setup_screen.dart';
 import 'presentation/screens/setup/termux_setup_screen.dart';
 
-class App extends StatelessWidget {
+class App extends ConsumerWidget {
   const App({super.key});
 
   static final GoRouter router = GoRouter(
@@ -44,7 +46,8 @@ class App extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appSettings = ref.watch(settingsProvider);
     return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
@@ -56,7 +59,14 @@ class App extends StatelessWidget {
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: Colors.grey.shade50,
-        textTheme: GoogleFonts.interTextTheme(),
+        textTheme: GoogleFonts.interTextTheme().apply(
+          bodyColor: Colors.black,
+          displayColor: Colors.black,
+        ).copyWith(
+          bodyMedium: GoogleFonts.inter(
+            fontSize: appSettings.fontSize,
+          ),
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -68,9 +78,16 @@ class App extends StatelessWidget {
         scaffoldBackgroundColor: Colors.grey.shade900,
         textTheme: GoogleFonts.interTextTheme(
           ThemeData(brightness: Brightness.dark).textTheme,
+        ).apply(
+          bodyColor: Colors.white,
+          displayColor: Colors.white,
+        ).copyWith(
+          bodyMedium: GoogleFonts.inter(
+            fontSize: appSettings.fontSize,
+          ),
         ),
       ),
-      themeMode: ThemeMode.system,
+      themeMode: appSettings.themeMode,
       routerConfig: router,
     );
   }

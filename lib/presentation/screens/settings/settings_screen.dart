@@ -47,16 +47,16 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             const Text('Theme'),
-            SegmentedButton<String>(
+            SegmentedButton<ThemeMode>(
               segments: const [
-                ButtonSegment(value: 'light', label: Text('Light')),
-                ButtonSegment(value: 'dark', label: Text('Dark')),
-                ButtonSegment(value: 'system', label: Text('System')),
+                ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+                ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                ButtonSegment(value: ThemeMode.system, label: Text('System')),
               ],
-              selected: {settings.theme},
+              selected: {settings.themeMode},
               onSelectionChanged: (values) {
                 if (values.isNotEmpty) {
-                  notifier.update(settings.copyWith(theme: values.first));
+                  notifier.update(settings.copyWith(themeMode: values.first));
                 }
               },
             ),

@@ -10,11 +10,8 @@ part 'chat_provider.g.dart';
 
 @riverpod
 class ChatProvider extends _$ChatProvider {
-  late final OllamaRemoteDatasource datasource;
-
   @override
   Future<List<ChatMessage>> build() async {
-    datasource = ref.read(ollamaRemoteDatasourceProvider);
     return [];
   }
 
@@ -27,6 +24,8 @@ class ChatProvider extends _$ChatProvider {
     state = const AsyncValue.loading();
 
     try {
+      final dio = ref.read(dioProvider);
+      final datasource = OllamaRemoteDatasource(dio: dio);
       final stream = datasource.chatStream(
         model: model,
         messages: messages,

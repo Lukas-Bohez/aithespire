@@ -18,9 +18,15 @@ LazyDatabase _openConnection() {
   });
 }
 
+class Settings extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get themeMode => text().withDefault(Constant('system'))();
+  RealColumn get fontSize => real().withDefault(const Constant(15.0))();
+}
+
 @DriftDatabase(
-  tables: [ChatSessions, ChatMessages, OllamaModels],
-  daos: [ChatSessionDao, ChatMessageDao, OllamaModelDao],
+  tables: [ChatSessions, ChatMessages, OllamaModels, Settings],
+  daos: [ChatSessionDao, ChatMessageDao, OllamaModelDao, SettingsDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -61,4 +67,24 @@ class OllamaModelDao extends DatabaseAccessor<AppDatabase> with _$OllamaModelDao
   Future<int> createOllamaModel(OllamaModelsCompanion entry) => into(ollamaModels).insert(entry);
   Future<List<OllamaModelModel>> getAllModels() => select(ollamaModels).get();
   Future<int> deleteOllamaModel(int id) => (delete(ollamaModels)..where((tbl) => tbl.id.equals(id))).go();
+}
+
+@DriftAccessor(tables: [Settings])
+class SettingsDao extends DatabaseAccessor<AppDatabase> with _$SettingsDaoMixin {
+  SettingsDao(AppDatabase db) : super(db);
+
+  Future<Setting?> getSettings() async {
+    final rows = await select(settings).get();
+    return rows.isNotEmpty ? rows.first : null;
+  }
+
+  Future<int> upsertSettings(SettingsCompanion entry) async {
+    // Keep a single row only.
+    final existing = await select(settings).get();
+    if (existing.isEmpty) {
+      return into(settings).insert(entry);
+    } else {
+      return (update(settings)..where((tbl) => tbl.id.equals(existing.first.id))).write(entry);
+    }
+  }
 }
