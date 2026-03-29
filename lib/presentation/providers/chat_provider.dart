@@ -13,7 +13,7 @@ part 'chat_provider.g.dart';
 @riverpod
 class ChatProvider extends _$ChatProvider {
   late final ChatRepositoryImpl repository;
-  int? currentSessionId;
+  int? activeSessionId;
 
   @override
   Future<List<ChatMessage>> build() async {
@@ -26,21 +26,28 @@ class ChatProvider extends _$ChatProvider {
 
   Future<void> loadSession(int sessionId) async {
     final messages = await repository.getMessages(sessionId.toString());
-    currentSessionId = sessionId;
+    activeSessionId = sessionId;
     state = AsyncValue.data(messages);
   }
 
+  Future<void> resetSession() async {
+    activeSessionId = null;
+    state = const AsyncValue.data([]);
+  }
+
   Future<void> sendMessage({
-    required String sessionId,
+    String? sessionId,
     required String model,
     required List<Map<String, dynamic>> messages,
     String? systemPrompt,
   }) async {
-    var sessionIdInt = int.tryParse(sessionId) ?? 0;
+    var sessionIdInt = activeSessionId ?? int.tryParse(sessionId ?? '') ?? 0;
     if (sessionIdInt <= 0) {
       final newSession = await repository.createSession(model: model, systemPrompt: systemPrompt);
       sessionIdInt = newSession.id;
-      currentSessionId = sessionIdInt;
+      activeSessionId = sessionIdInt;
+    } else {
+      activeSessionId = sessionIdInt;
     }
 
     final existing = state.maybeWhen(data: (value) => value, orElse: () => <ChatMessage>[]);
@@ -145,12 +152,10 @@ class ChatProvider extends _$ChatProvider {
   }
 
   Future<void> retryMessage({
-    required String sessionId,
     required String model,
     required String retryContent,
   }) async {
     await sendMessage(
-      sessionId: sessionId,
       model: model,
       messages: [
         {'role': 'user', 'content': retryContent}

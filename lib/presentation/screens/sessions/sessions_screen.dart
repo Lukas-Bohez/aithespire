@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/chat_provider.dart';
 import '../../providers/session_provider.dart';
 
 class SessionsScreen extends ConsumerStatefulWidget {
@@ -77,8 +78,9 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                                 .pinSession(session.id, !session.pinned);
                           },
                         ),
-                        onTap: () {
-                          context.go('/chat', extra: {'sessionId': session.id, 'model': session.model});
+                        onTap: () async {
+                          await ref.read(chatProvider.notifier).loadSession(session.id);
+                          context.go('/chat');
                         },
                       ),
                     );

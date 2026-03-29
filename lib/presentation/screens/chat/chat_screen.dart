@@ -68,7 +68,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final modelsState = ref.watch(modelsProvider);
     final currentModel = _activeModel.isNotEmpty ? _activeModel : settings.defaultModel;
 
-    final sessionId = widget.sessionId?.toString() ?? 'default';
     final messages = chatState.maybeWhen(data: (list) => list, orElse: () => <ChatMessage>[]);
     final isLoading = chatState is AsyncLoading;
 
@@ -80,6 +79,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'New Chat',
+          onPressed: () {
+            ref.read(chatProvider.notifier).resetSession();
+          },
+        ),
         title: Row(
           children: [
             const Text('Chat'),
@@ -142,7 +148,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         message: msg,
                         onRetry: msg.isError
                             ? () => notifier.retryMessage(
-                                  sessionId: sessionId,
                                   model: currentModel,
                                   retryContent: msg.retryContent ?? '',
                                 )
@@ -159,7 +164,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (text.isEmpty) return;
 
               await notifier.sendMessage(
-                sessionId: sessionId,
                 model: currentModel,
                 messages: [
                   {'role': 'user', 'content': text},
