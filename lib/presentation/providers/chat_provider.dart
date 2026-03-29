@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/constants/app_constants.dart';
@@ -56,6 +57,13 @@ class ChatProvider extends _$ChatProvider {
       );
       collected.add(finalMessage);
       state = AsyncValue.data(collected);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        state = AsyncValue.error(Exception('Cannot reach Ollama. Is it running?'), StackTrace.current);
+      } else {
+        state = AsyncValue.error(e, StackTrace.current);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

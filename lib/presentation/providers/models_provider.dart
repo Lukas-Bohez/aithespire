@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/repositories/model_repository_impl.dart';
@@ -13,7 +14,15 @@ class ModelsProvider extends _$ModelsProvider {
   @override
   Future<List<OllamaModel>> build() async {
     repository = ModelRepositoryImpl(OllamaRemoteDatasource());
-    return await repository.fetchModels();
+    try {
+      return await repository.fetchModels();
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        throw Exception('Cannot reach Ollama. Is it running?');
+      }
+      rethrow;
+    }
   }
 
   Future<void> refresh() async {
@@ -21,6 +30,13 @@ class ModelsProvider extends _$ModelsProvider {
     try {
       final models = await repository.fetchModels();
       state = AsyncValue.data(models);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        state = AsyncValue.error(Exception('Cannot reach Ollama. Is it running?'), StackTrace.current);
+      } else {
+        state = AsyncValue.error(e, StackTrace.current);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
