@@ -1,4 +1,4 @@
-# AIthespire
+# AI The Spire
 
 ## Private, offline AI chat powered by Ollama (no cloud, no tracking)
 
